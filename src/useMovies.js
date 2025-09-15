@@ -1,13 +1,24 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 const KEY = "a8026a07";
+
 export function useMovies(query) {
   const [movies, setMovies] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
-  useEffect(
-    function () {
-      const controller = new AbortController();
+  const debounceTimeout = useRef();
 
+  useEffect(() => {
+    const controller = new AbortController();
+
+    if (debounceTimeout.current) clearTimeout(debounceTimeout.current);
+
+    if (query.length < 3) {
+      setMovies([]);
+      setError("");
+      return;
+    }
+
+    debounceTimeout.current = setTimeout(() => {
       async function fetchMovies() {
         try {
           setIsLoading(true);
@@ -36,20 +47,14 @@ export function useMovies(query) {
         }
       }
 
-      if (query.length < 3) {
-        setMovies([]);
-        setError("");
-        return;
-      }
-
-      
       fetchMovies();
+    }, 500); // 500ms debounce
 
-      return function () {
-        controller.abort();
-      };
-    },
-    [query]
-  );
+    return () => {
+      controller.abort();
+      if (debounceTimeout.current) clearTimeout(debounceTimeout.current);
+    };
+  }, [query]);
+
   return { movies, isLoading, error };
 }
